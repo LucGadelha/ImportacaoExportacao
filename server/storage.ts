@@ -240,11 +240,13 @@ interface ExchangeRateCache {
   [key: string]: {
     rates: { [currency: string]: number };
     timestamp: number;
+    hits: number;
   };
 }
 
 const exchangeRateCache: ExchangeRateCache = {};
 const CACHE_TTL = 3600000; // 1 hora em milissegundos
+const CACHE_MAX_SIZE = 100; // Limite máximo de entradas em cache
 
 export const getExchangeRates = async (baseCurrency = 'USD', date?: string): Promise<{rates: {[currency: string]: number}, timestamp: number, cached: boolean}> => {
   const cacheKey = `${baseCurrency}_${date || 'latest'}`;
@@ -252,10 +254,36 @@ export const getExchangeRates = async (baseCurrency = 'USD', date?: string): Pro
   
   // Verificar se temos no cache e se ainda é válido
   if (exchangeRateCache[cacheKey] && (now - exchangeRateCache[cacheKey].timestamp) < CACHE_TTL) {
+    // Incrementar contador de hits para esta entrada de cache
+    exchangeRateCache[cacheKey].hits = (exchangeRateCache[cacheKey].hits || 0) + 1;
+    
     return { 
       ...exchangeRateCache[cacheKey],
       cached: true
     };
+  }
+  
+  // Limpar cache se exceder o tamanho máximo
+  const cacheSize = Object.keys(exchangeRateCache).length;
+  if (cacheSize >= CACHE_MAX_SIZE) {
+    // Remover as entradas mais antigas ou menos usadas
+    const entries = Object.entries(exchangeRateCache);
+    // Ordenar pelo timestamp (mais antigo primeiro) ou menor número de hits
+    entries.sort((a, b) => {
+      // Se a diferença de timestamp for grande, use isso como critério
+      const timeDiff = a[1].timestamp - b[1].timestamp;
+      if (Math.abs(timeDiff) > CACHE_TTL / 2) {
+        return timeDiff;
+      }
+      // Caso contrário, use o número de hits como critério
+      return (a[1].hits || 0) - (b[1].hits || 0);
+    });
+    
+    // Remover 20% das entradas mais antigas/menos usadas
+    const removeCount = Math.ceil(cacheSize * 0.2); 
+    for (let i = 0; i < removeCount && i < entries.length; i++) {
+      delete exchangeRateCache[entries[i][0]];
+    }
   }
   
   try {
@@ -293,7 +321,8 @@ export const getExchangeRates = async (baseCurrency = 'USD', date?: string): Pro
     
     exchangeRateCache[cacheKey] = {
       rates,
-      timestamp: now
+      timestamp: now,
+      hits: 1  // Iniciar contador de hits
     };
     
     return result;

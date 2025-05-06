@@ -89,18 +89,18 @@ export default function ExchangeRates() {
         return;
       }
       
-      const result = await apiRequest<ConversionResult>('/api/exchange-rates/convert', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          amount: numericAmount,
-          from: fromCurrency,
-          to: toCurrency,
-          date: selectedDate
-        })
-      });
+      const payload = {
+        amount: numericAmount,
+        from: fromCurrency,
+        to: toCurrency,
+        date: selectedDate
+      };
+      
+      const result = await apiRequest<ConversionResult>(
+        "POST", 
+        '/api/exchange-rates/convert', 
+        payload
+      );
       
       setConversionResult(result);
     } catch (error) {
