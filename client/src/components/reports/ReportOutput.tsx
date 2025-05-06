@@ -3,9 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { ReportFilters } from "./ReportFilters";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { formatCurrency } from "@/lib/utils";
-import { Printer, FileSpreadsheet, FileText } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatCurrency, cn } from "@/lib/utils";
+import { Printer, FileSpreadsheet, FileText, CheckCircle2, AlertCircle } from "lucide-react";
 import ChartComponent from "./ChartComponent";
+import { useMobile, useBreakpoint } from "@/hooks/use-mobile";
 
 interface SalesOverview {
   totalSales: number;
@@ -95,11 +97,80 @@ export default function ReportOutput({ filters }: { filters: ReportFilters }) {
     return statusMap[status] || status;
   };
   
+  const isMobile = useMobile();
+  
   if (isLoading) {
     return (
-      <Card className="bg-white rounded-lg shadow p-4">
-        <CardContent className="p-4 text-center">
-          <p className="text-gray-500">Carregando relatório...</p>
+      <Card className="bg-white dark:bg-gray-800 rounded-lg shadow">
+        <CardHeader className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex justify-between items-center">
+            <Skeleton className="h-6 w-48" />
+            <div className="flex space-x-2">
+              <Skeleton className="h-8 w-24" />
+              <Skeleton className="h-8 w-24" />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {/* Visão geral skeleton */}
+            <div>
+              <Skeleton className="h-6 w-32 mb-3" />
+              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                <div className="grid grid-cols-2 gap-4">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i}>
+                      <Skeleton className="h-4 w-24 mb-2" />
+                      <Skeleton className="h-7 w-16" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            {/* Gráfico skeleton */}
+            <div>
+              <Skeleton className="h-6 w-32 mb-3" />
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 h-64 flex items-center justify-center">
+                <Skeleton className="h-52 w-full rounded-lg" />
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {/* Tabela skeleton */}
+            <div>
+              <Skeleton className="h-6 w-40 mb-3" />
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-3"><Skeleton className="h-4 w-20" /></th>
+                      <th className="px-4 py-3"><Skeleton className="h-4 w-20" /></th>
+                      <th className="px-4 py-3"><Skeleton className="h-4 w-20" /></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[1, 2, 3, 4].map((i) => (
+                      <tr key={i}>
+                        <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>
+                        <td className="px-4 py-3"><Skeleton className="h-4 w-12" /></td>
+                        <td className="px-4 py-3"><Skeleton className="h-4 w-16" /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            {/* Gráfico skeleton */}
+            <div>
+              <Skeleton className="h-6 w-40 mb-3" />
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 h-64 flex items-center justify-center">
+                <Skeleton className="h-52 w-full rounded-lg" />
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
     );
@@ -107,9 +178,15 @@ export default function ReportOutput({ filters }: { filters: ReportFilters }) {
   
   if (!data) {
     return (
-      <Card className="bg-white rounded-lg shadow p-4">
-        <CardContent className="p-4 text-center">
-          <p className="text-gray-500">Selecione os filtros e clique em "Gerar Relatório" para visualizar os dados.</p>
+      <Card className="bg-white dark:bg-gray-800 rounded-lg shadow">
+        <CardContent className="p-8 text-center">
+          <div className="flex flex-col items-center justify-center space-y-4">
+            <AlertCircle className="h-12 w-12 text-gray-400 dark:text-gray-500" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Nenhum dado disponível</h3>
+            <p className="text-gray-500 dark:text-gray-400 max-w-md">
+              Selecione os filtros e clique em "Gerar Relatório" ou "Prévia" para visualizar os dados.
+            </p>
+          </div>
         </CardContent>
       </Card>
     );
