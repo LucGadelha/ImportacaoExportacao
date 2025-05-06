@@ -39,19 +39,18 @@ export default function Sidebar({ onClose }: SidebarProps) {
             
             return (
               <li key={item.name}>
-                <Link href={item.href}>
-                  <a
-                    className={cn(
-                      "flex items-center py-3 px-4 transition duration-150",
-                      isActive 
-                        ? "bg-gray-700 text-white" 
-                        : "text-gray-300 hover:bg-gray-700 hover:text-white"
-                    )}
-                    onClick={onClose}
-                  >
-                    <item.icon className="mr-3 h-5 w-5" />
-                    <span>{item.name}</span>
-                  </a>
+                <Link 
+                  href={item.href}
+                  className={cn(
+                    "flex items-center py-3 px-4 transition duration-150",
+                    isActive 
+                      ? "bg-gray-700 text-white" 
+                      : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                  )}
+                  onClick={onClose}
+                >
+                  <item.icon className="mr-3 h-5 w-5" />
+                  <span>{item.name}</span>
                 </Link>
               </li>
             );
