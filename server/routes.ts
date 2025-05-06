@@ -7,11 +7,17 @@ import {
   customers, 
   orders, 
   orderItems, 
-  activities, 
+  activities,
+  carriers,
+  shipments,
   Product, 
   Customer,
   Order,
-  OrderItem
+  OrderItem,
+  Carrier,
+  Shipment,
+  shipmentStatusEnum,
+  shipmentTypeEnum
 } from "@shared/schema";
 import { generateOrderNumber } from "../client/src/lib/utils";
 
@@ -642,6 +648,224 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         message: error instanceof Error ? error.message : "Erro ao converter moeda" 
       });
+    }
+  });
+  
+  // TRANSPORTADORAS (CARRIERS) ROUTES
+  app.get(`${apiPrefix}/carriers`, async (req, res) => {
+    try {
+      const onlyActive = req.query.active === 'true';
+      const carriers = onlyActive 
+        ? await storage.getActiveCarriers()
+        : await storage.getAllCarriers();
+      
+      res.json(carriers);
+    } catch (error) {
+      console.error("Erro ao buscar transportadoras:", error);
+      res.status(500).json({ message: "Erro ao buscar transportadoras" });
+    }
+  });
+  
+  app.get(`${apiPrefix}/carriers/:id`, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID de transportadora inválido" });
+      }
+      
+      const carrier = await storage.getCarrierById(id);
+      if (!carrier) {
+        return res.status(404).json({ message: "Transportadora não encontrada" });
+      }
+      
+      res.json(carrier);
+    } catch (error) {
+      console.error("Erro ao buscar transportadora:", error);
+      res.status(500).json({ message: "Erro ao buscar transportadora" });
+    }
+  });
+  
+  app.post(`${apiPrefix}/carriers`, async (req, res) => {
+    try {
+      const newCarrier = await storage.createCarrier(req.body);
+      res.status(201).json(newCarrier);
+    } catch (error) {
+      console.error("Erro ao criar transportadora:", error);
+      res.status(500).json({ message: "Erro ao criar transportadora" });
+    }
+  });
+  
+  app.patch(`${apiPrefix}/carriers/:id`, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID de transportadora inválido" });
+      }
+      
+      const carrier = await storage.getCarrierById(id);
+      if (!carrier) {
+        return res.status(404).json({ message: "Transportadora não encontrada" });
+      }
+      
+      const updatedCarrier = await storage.updateCarrier(id, req.body);
+      res.json(updatedCarrier);
+    } catch (error) {
+      console.error("Erro ao atualizar transportadora:", error);
+      res.status(500).json({ message: "Erro ao atualizar transportadora" });
+    }
+  });
+  
+  // EMBARQUES (SHIPMENTS) ROUTES
+  app.get(`${apiPrefix}/shipments`, async (req, res) => {
+    try {
+      let shipments;
+      
+      // Filtrar por status ou próximos embarques
+      if (req.query.status) {
+        shipments = await storage.getShipmentsByStatus(req.query.status as string);
+      } else if (req.query.upcoming === 'true') {
+        const days = req.query.days ? parseInt(req.query.days as string) : 7;
+        shipments = await storage.getUpcomingShipments(days);
+      } else {
+        shipments = await storage.getAllShipments();
+      }
+      
+      res.json(shipments);
+    } catch (error) {
+      console.error("Erro ao buscar embarques:", error);
+      res.status(500).json({ message: "Erro ao buscar embarques" });
+    }
+  });
+  
+  app.get(`${apiPrefix}/shipments/:id`, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID de embarque inválido" });
+      }
+      
+      const shipment = await storage.getShipmentById(id);
+      if (!shipment) {
+        return res.status(404).json({ message: "Embarque não encontrado" });
+      }
+      
+      res.json(shipment);
+    } catch (error) {
+      console.error("Erro ao buscar embarque:", error);
+      res.status(500).json({ message: "Erro ao buscar embarque" });
+    }
+  });
+  
+  app.get(`${apiPrefix}/orders/:orderId/shipments`, async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.orderId);
+      if (isNaN(orderId)) {
+        return res.status(400).json({ message: "ID de pedido inválido" });
+      }
+      
+      const order = await storage.getOrderById(orderId);
+      if (!order) {
+        return res.status(404).json({ message: "Pedido não encontrado" });
+      }
+      
+      const shipments = await storage.getShipmentsByOrderId(orderId);
+      res.json(shipments);
+    } catch (error) {
+      console.error("Erro ao buscar embarques do pedido:", error);
+      res.status(500).json({ message: "Erro ao buscar embarques do pedido" });
+    }
+  });
+  
+  app.post(`${apiPrefix}/shipments`, async (req, res) => {
+    try {
+      // Verificar se o pedido existe
+      const orderId = req.body.orderId;
+      if (!orderId) {
+        return res.status(400).json({ message: "ID do pedido é obrigatório" });
+      }
+      
+      const order = await storage.getOrderById(orderId);
+      if (!order) {
+        return res.status(404).json({ message: "Pedido não encontrado" });
+      }
+      
+      // Verificar se a transportadora existe
+      const carrierId = req.body.carrierId;
+      if (!carrierId) {
+        return res.status(400).json({ message: "ID da transportadora é obrigatório" });
+      }
+      
+      const carrier = await storage.getCarrierById(carrierId);
+      if (!carrier) {
+        return res.status(404).json({ message: "Transportadora não encontrada" });
+      }
+      
+      // Verificar se a data de agendamento é válida
+      if (!req.body.scheduledDate) {
+        return res.status(400).json({ message: "Data de agendamento é obrigatória" });
+      }
+      
+      // Criar embarque
+      const newShipment = await storage.createShipment(req.body);
+      res.status(201).json(newShipment);
+    } catch (error) {
+      console.error("Erro ao criar embarque:", error);
+      res.status(500).json({ message: "Erro ao criar embarque" });
+    }
+  });
+  
+  app.patch(`${apiPrefix}/shipments/:id`, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID de embarque inválido" });
+      }
+      
+      const shipment = await storage.getShipmentById(id);
+      if (!shipment) {
+        return res.status(404).json({ message: "Embarque não encontrado" });
+      }
+      
+      const updatedShipment = await storage.updateShipment(id, req.body);
+      res.json(updatedShipment);
+    } catch (error) {
+      console.error("Erro ao atualizar embarque:", error);
+      res.status(500).json({ message: "Erro ao atualizar embarque" });
+    }
+  });
+  
+  app.post(`${apiPrefix}/shipments/:id/cancel`, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID de embarque inválido" });
+      }
+      
+      const shipment = await storage.getShipmentById(id);
+      if (!shipment) {
+        return res.status(404).json({ message: "Embarque não encontrado" });
+      }
+      
+      const { reason } = req.body;
+      const canceledShipment = await storage.cancelShipment(id, reason);
+      res.json(canceledShipment);
+    } catch (error) {
+      console.error("Erro ao cancelar embarque:", error);
+      res.status(500).json({ message: "Erro ao cancelar embarque" });
+    }
+  });
+
+  // Obter metadados para embarques
+  app.get(`${apiPrefix}/shipments-metadata`, async (req, res) => {
+    try {
+      // Retornar tipos de embarque e status possíveis
+      res.json({
+        types: shipmentTypeEnum.enumValues,
+        statuses: shipmentStatusEnum.enumValues
+      });
+    } catch (error) {
+      console.error("Erro ao buscar metadados de embarques:", error);
+      res.status(500).json({ message: "Erro ao buscar metadados de embarques" });
     }
   });
 

@@ -265,6 +265,74 @@ async function seed() {
       console.log("⏩ Já existem atividades no sistema");
     }
 
+    // Seed transportadoras (carriers)
+    const carrierData = [
+      {
+        name: "TransporteRápido S.A.",
+        code: "TR-001",
+        contact: "Carlos Mendes",
+        phone: "(11) 98765-4321",
+        email: "contato@transporterapido.com.br",
+        active: true
+      },
+      {
+        name: "LogísticaExpress",
+        code: "LE-002",
+        contact: "Mariana Santos",
+        phone: "(21) 97654-3210",
+        email: "atendimento@logisticaexpress.com.br",
+        active: true
+      },
+      {
+        name: "CargoMarítimo Ltda.",
+        code: "CM-003",
+        contact: "Roberto Silva",
+        phone: "(47) 96543-2109",
+        email: "contato@cargomaritimo.com.br",
+        active: true
+      },
+      {
+        name: "AéreoCargo Brasil",
+        code: "ACB-004",
+        contact: "Patricia Oliveira",
+        phone: "(51) 95432-1098",
+        email: "operacoes@aereocargo.com.br",
+        active: true
+      },
+      {
+        name: "Transportadora Nacional Ltda.",
+        code: "TN-005",
+        contact: "Marcos Souza",
+        phone: "(31) 94321-0987",
+        email: "atendimento@transportadoranacional.com.br",
+        active: false
+      }
+    ];
+
+    // Insert carriers
+    for (const carrier of carrierData) {
+      // Check if carrier already exists
+      const existingCarrier = await db.query.carriers.findFirst({
+        where: (carriers, { eq }) => eq(carriers.code, carrier.code)
+      });
+
+      if (!existingCarrier) {
+        await db.insert(schema.carriers).values({
+          name: carrier.name,
+          code: carrier.code,
+          contact: carrier.contact,
+          phone: carrier.phone,
+          email: carrier.email,
+          active: carrier.active,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+        console.log(`✅ Transportadora criada: ${carrier.name}`);
+      } else {
+        console.log(`⏩ Transportadora já existe: ${carrier.name}`);
+      }
+    }
+
     console.log("✅ Seed concluído com sucesso!");
 
   } catch (error) {

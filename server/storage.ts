@@ -5,23 +5,31 @@ import {
   orders, 
   orderItems, 
   activities, 
+  carriers,
+  shipments,
   productInsertSchema, 
   customerInsertSchema,
   orderInsertSchema,
   orderItemInsertSchema,
   activityInsertSchema,
+  carrierInsertSchema,
+  shipmentInsertSchema,
   ProductInsert,
   CustomerInsert,
   OrderInsert,
   OrderItemInsert,
   ActivityInsert,
+  CarrierInsert,
+  ShipmentInsert,
   Product,
   Customer,
   Order,
   OrderItem,
-  Activity
+  Activity,
+  Carrier,
+  Shipment
 } from "@shared/schema";
-import { eq, desc, and, lte, gte, lt, sql } from "drizzle-orm";
+import { eq, desc, and, lte, gte, lt, sql, asc, ne, between } from "drizzle-orm";
 
 // PRODUCTS
 export const getAllProducts = async () => {
