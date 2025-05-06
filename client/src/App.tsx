@@ -11,6 +11,7 @@ import Products from "@/pages/Products";
 import Orders from "@/pages/Orders";
 import Inventory from "@/pages/Inventory";
 import Reports from "@/pages/Reports";
+import ExchangeRates from "@/pages/ExchangeRates";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -22,6 +23,7 @@ function Router() {
         <Route path="/orders" component={Orders} />
         <Route path="/inventory" component={Inventory} />
         <Route path="/reports" component={Reports} />
+        <Route path="/exchange-rates" component={ExchangeRates} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

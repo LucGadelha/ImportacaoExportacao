@@ -6,7 +6,8 @@ import {
   FileText, 
   Layers, 
   BarChart3, 
-  User 
+  User,
+  DollarSign
 } from "lucide-react";
 
 interface SidebarProps {
@@ -22,6 +23,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
     { name: "Pedidos", href: "/orders", icon: FileText },
     { name: "Estoque", href: "/inventory", icon: Layers },
     { name: "Relatórios", href: "/reports", icon: BarChart3 },
+    { name: "Taxas de Câmbio", href: "/exchange-rates", icon: DollarSign },
   ];
   
   return (
