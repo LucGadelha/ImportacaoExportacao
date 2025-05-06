@@ -32,7 +32,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get(`${apiPrefix}/products/:id`, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const idParam = req.params.id;
+      // Validar se o id é um número válido
+      if (!idParam || isNaN(parseInt(idParam))) {
+        return res.status(400).json({ message: "ID de produto inválido" });
+      }
+      
+      const id = parseInt(idParam);
       const product = await storage.getProductById(id);
       
       if (!product) {
@@ -66,7 +72,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch(`${apiPrefix}/products/:id`, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const idParam = req.params.id;
+      // Validar se o id é um número válido
+      if (!idParam || isNaN(parseInt(idParam))) {
+        return res.status(400).json({ message: "ID de produto inválido" });
+      }
+      
+      const id = parseInt(idParam);
       const product = await storage.getProductById(id);
       
       if (!product) {
@@ -91,7 +103,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete(`${apiPrefix}/products/:id`, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const idParam = req.params.id;
+      // Validar se o id é um número válido
+      if (!idParam || isNaN(parseInt(idParam))) {
+        return res.status(400).json({ message: "ID de produto inválido" });
+      }
+      
+      const id = parseInt(idParam);
       const product = await storage.getProductById(id);
       
       if (!product) {

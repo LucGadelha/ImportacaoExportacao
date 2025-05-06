@@ -1,5 +1,6 @@
 import { db } from "./index";
 import * as schema from "@shared/schema";
+import { eq } from "drizzle-orm";
 import { generateOrderNumber } from "../client/src/lib/utils";
 
 async function seed() {
@@ -218,7 +219,7 @@ async function seed() {
                 quantity: product.quantity - quantity,
                 updatedAt: new Date()
               })
-              .where(schema.products.id.equals(product.id));
+              .where(eq(schema.products.id, product.id));
           }
         }
       }

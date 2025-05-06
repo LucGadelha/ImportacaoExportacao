@@ -133,11 +133,14 @@ export const getOrdersByCustomerId = async (customerId: number) => {
   });
 };
 
-export const getOrdersByDateRange = async (startDate: string, endDate: string) => {
+export const getOrdersByDateRange = async (startDate: Date | string, endDate: Date | string) => {
+  const startDateString = startDate instanceof Date ? startDate.toISOString() : startDate;
+  const endDateString = endDate instanceof Date ? endDate.toISOString() : endDate;
+  
   return db.query.orders.findMany({
     where: and(
-      gte(orders.createdAt, startDate),
-      lte(orders.createdAt, endDate)
+      gte(orders.createdAt, startDateString),
+      lte(orders.createdAt, endDateString)
     ),
     orderBy: [desc(orders.createdAt)]
   });
