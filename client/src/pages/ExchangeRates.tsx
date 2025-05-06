@@ -77,8 +77,7 @@ export default function ExchangeRates() {
   } = useQuery<ExchangeRateResponse>({
     queryKey: ['/api/exchange-rates', baseCurrency, selectedDate],
     queryFn: async () => {
-      const response = await apiRequest<ExchangeRateResponse>(`/api/exchange-rates?base=${baseCurrency}&date=${selectedDate}`);
-      return response;
+      return await apiRequest<ExchangeRateResponse>("GET", `/api/exchange-rates?base=${baseCurrency}&date=${selectedDate}`);
     }
   });
   
