@@ -164,7 +164,7 @@ async function seed() {
         for (let j = 0; j < numOrders; j++) {
           // Select 1-3 random products for this order
           const numProducts = 1 + Math.floor(Math.random() * 3);
-          const selectedProducts = [];
+          const selectedProducts: typeof allProducts = [];
           
           for (let k = 0; k < numProducts; k++) {
             const randomIndex = Math.floor(Math.random() * allProducts.length);

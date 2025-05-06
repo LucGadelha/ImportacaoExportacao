@@ -268,7 +268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customerId: customer.id,
         orderNumber: orderNumber || generateOrderNumber(),
         status: status || "pending",
-        total
+        total: total.toString()
       });
       
       // Create order items and update stock
@@ -585,6 +585,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating sales report:", error);
       res.status(500).json({ message: "Erro ao gerar relatório de vendas" });
+    }
+  });
+
+  // EXCHANGE RATES API
+  app.get(`${apiPrefix}/exchange-rates`, async (req, res) => {
+    try {
+      const { base, date } = req.query;
+      const baseCurrency = (base as string) || 'USD';
+      
+      const exchangeRates = await storage.getExchangeRates(
+        baseCurrency, 
+        date as string | undefined
+      );
+      
+      res.json(exchangeRates);
+    } catch (error) {
+      console.error("Error fetching exchange rates:", error);
+      res.status(500).json({ message: "Erro ao buscar taxas de câmbio" });
+    }
+  });
+  
+  app.post(`${apiPrefix}/exchange-rates/convert`, async (req, res) => {
+    try {
+      const { amount, from, to, date } = req.body;
+      
+      if (!amount || !from || !to) {
+        return res.status(400).json({ 
+          message: "Valores obrigatórios: amount, from, to" 
+        });
+      }
+      
+      const parsedAmount = parseFloat(amount);
+      
+      if (isNaN(parsedAmount)) {
+        return res.status(400).json({ message: "Valor inválido para conversão" });
+      }
+      
+      const result = await storage.convertCurrency(
+        parsedAmount,
+        from,
+        to,
+        date
+      );
+      
+      res.json({
+        from,
+        to,
+        amount: parsedAmount,
+        convertedAmount: result.amount,
+        rate: result.rate,
+        date: date || new Date().toISOString().split('T')[0]
+      });
+    } catch (error) {
+      console.error("Error converting currency:", error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : "Erro ao converter moeda" 
+      });
     }
   });
 

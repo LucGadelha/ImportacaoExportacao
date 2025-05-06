@@ -21,7 +21,7 @@ import {
   OrderItem,
   Activity
 } from "@shared/schema";
-import { eq, desc, and, lte, gte, lt } from "drizzle-orm";
+import { eq, desc, and, lte, gte, lt, sql } from "drizzle-orm";
 
 // PRODUCTS
 export const getAllProducts = async () => {
@@ -134,16 +134,23 @@ export const getOrdersByCustomerId = async (customerId: number) => {
 };
 
 export const getOrdersByDateRange = async (startDate: Date | string, endDate: Date | string) => {
-  const startDateString = startDate instanceof Date ? startDate.toISOString() : startDate;
-  const endDateString = endDate instanceof Date ? endDate.toISOString() : endDate;
+  // Convert to SQL-compatible date strings
+  const formatDate = (date: Date | string): string => {
+    if (date instanceof Date) {
+      return date.toISOString();
+    }
+    return String(date);
+  };
   
-  return db.query.orders.findMany({
-    where: and(
-      gte(orders.createdAt, startDateString),
-      lte(orders.createdAt, endDateString)
-    ),
-    orderBy: [desc(orders.createdAt)]
-  });
+  const startDateFormatted = formatDate(startDate);
+  const endDateFormatted = formatDate(endDate);
+  
+  // Criando SQL customizado para evitar problemas de tipagem
+  const query = db.select().from(orders).where(
+    sql`${orders.createdAt} >= ${startDateFormatted} AND ${orders.createdAt} <= ${endDateFormatted}`
+  ).orderBy(desc(orders.createdAt));
+  
+  return query;
 };
 
 export const getActiveOrders = async () => {
@@ -227,6 +234,94 @@ export const createActivity = async (data: ActivityInsert) => {
   return newActivity;
 };
 
+// EXCHANGE RATES
+// Cache para taxas de câmbio
+interface ExchangeRateCache {
+  [key: string]: {
+    rates: { [currency: string]: number };
+    timestamp: number;
+  };
+}
+
+const exchangeRateCache: ExchangeRateCache = {};
+const CACHE_TTL = 3600000; // 1 hora em milissegundos
+
+export const getExchangeRates = async (baseCurrency = 'USD', date?: string): Promise<{rates: {[currency: string]: number}, timestamp: number, cached: boolean}> => {
+  const cacheKey = `${baseCurrency}_${date || 'latest'}`;
+  const now = Date.now();
+  
+  // Verificar se temos no cache e se ainda é válido
+  if (exchangeRateCache[cacheKey] && (now - exchangeRateCache[cacheKey].timestamp) < CACHE_TTL) {
+    return { 
+      ...exchangeRateCache[cacheKey],
+      cached: true
+    };
+  }
+  
+  try {
+    // Se não estiver no cache ou expirou, buscar nova taxa
+    // Esta implementação usa taxas de conversão estáticas para demonstração
+    // Em um ambiente real, você usaria uma API externa como Open Exchange Rates, APILAYER, etc.
+    const baseRates: {[key: string]: number} = {
+      'USD': 1.0,
+      'EUR': 0.92,
+      'BRL': 5.20,
+      'GBP': 0.78,
+      'JPY': 150.45,
+      'CAD': 1.35,
+      'AUD': 1.52,
+      'CNY': 7.23,
+      'CHF': 0.89,
+      'MXN': 16.85
+    };
+    
+    // Converter todas as taxas para a moeda base solicitada
+    const baseRate = baseRates[baseCurrency] || 1;
+    
+    // Calcular taxas de acordo com a moeda base
+    const rates: {[key: string]: number} = {};
+    for (const [currency, rate] of Object.entries(baseRates)) {
+      rates[currency] = rate / baseRate;
+    }
+    
+    // Armazenar no cache
+    const result = {
+      rates,
+      timestamp: now,
+      cached: false
+    };
+    
+    exchangeRateCache[cacheKey] = {
+      rates,
+      timestamp: now
+    };
+    
+    return result;
+  } catch (error) {
+    console.error('Erro ao buscar taxas de câmbio:', error);
+    throw new Error('Não foi possível obter as taxas de câmbio');
+  }
+};
+
+export const convertCurrency = async (
+  amount: number, 
+  fromCurrency = 'USD', 
+  toCurrency = 'BRL', 
+  date?: string
+): Promise<{amount: number, rate: number}> => {
+  const { rates } = await getExchangeRates(fromCurrency, date);
+  
+  if (!rates[toCurrency]) {
+    throw new Error(`Moeda ${toCurrency} não disponível para conversão`);
+  }
+  
+  const rate = rates[toCurrency];
+  return {
+    amount: amount * rate,
+    rate
+  };
+};
+
 export const storage = {
   // Products
   getAllProducts,
@@ -260,5 +355,9 @@ export const storage = {
   
   // Activities
   getRecentActivities,
-  createActivity
+  createActivity,
+  
+  // Exchange Rates
+  getExchangeRates,
+  convertCurrency
 };
