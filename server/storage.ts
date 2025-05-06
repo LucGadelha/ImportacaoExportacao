@@ -351,6 +351,204 @@ export const convertCurrency = async (
   };
 };
 
+// CARRIERS
+export const getAllCarriers = async () => {
+  return await db.query.carriers.findMany({
+    orderBy: (carriers, { asc }) => [asc(carriers.name)]
+  });
+};
+
+export const getActiveCarriers = async () => {
+  return await db.query.carriers.findMany({
+    where: (carriers, { eq }) => eq(carriers.active, true),
+    orderBy: (carriers, { asc }) => [asc(carriers.name)]
+  });
+};
+
+export const getCarrierById = async (id: number) => {
+  return await db.query.carriers.findFirst({
+    where: (carriers, { eq }) => eq(carriers.id, id)
+  });
+};
+
+export const getCarrierByCode = async (code: string) => {
+  return await db.query.carriers.findFirst({
+    where: (carriers, { eq }) => eq(carriers.code, code)
+  });
+};
+
+export const createCarrier = async (data: CarrierInsert) => {
+  const [newCarrier] = await db.insert(carriers).values(data).returning();
+  
+  await createActivity({
+    type: 'carrier',
+    description: `Transportadora ${data.name} cadastrada`,
+    referenceId: newCarrier.id
+  });
+  
+  return newCarrier;
+};
+
+export const updateCarrier = async (id: number, data: Partial<CarrierInsert>) => {
+  const [updatedCarrier] = await db.update(carriers)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(carriers.id, id))
+    .returning();
+  
+  await createActivity({
+    type: 'carrier',
+    description: `Transportadora ${updatedCarrier.name} atualizada`,
+    referenceId: updatedCarrier.id
+  });
+  
+  return updatedCarrier;
+};
+
+// SHIPMENTS
+export const getAllShipments = async () => {
+  return await db.query.shipments.findMany({
+    orderBy: (shipments, { desc }) => [desc(shipments.scheduledDate)],
+    with: {
+      order: true,
+      carrier: true
+    }
+  });
+};
+
+export const getShipmentById = async (id: number) => {
+  return await db.query.shipments.findFirst({
+    where: (shipments, { eq }) => eq(shipments.id, id),
+    with: {
+      order: {
+        with: {
+          customer: true,
+          items: {
+            with: {
+              product: true
+            }
+          }
+        }
+      },
+      carrier: true
+    }
+  });
+};
+
+export const getShipmentsByOrderId = async (orderId: number) => {
+  return await db.query.shipments.findMany({
+    where: (shipments, { eq }) => eq(shipments.orderId, orderId),
+    with: {
+      carrier: true
+    },
+    orderBy: (shipments, { desc }) => [desc(shipments.scheduledDate)]
+  });
+};
+
+export const getShipmentsByStatus = async (status: string) => {
+  return await db.query.shipments.findMany({
+    where: (shipments, { eq }) => eq(shipments.status, status as any),
+    with: {
+      order: true,
+      carrier: true
+    },
+    orderBy: (shipments, { desc }) => [desc(shipments.scheduledDate)]
+  });
+};
+
+export const getUpcomingShipments = async (days: number = 7) => {
+  const today = new Date();
+  const endDate = new Date();
+  endDate.setDate(today.getDate() + days);
+  
+  return await db.query.shipments.findMany({
+    where: (shipments, { and, between, eq, ne }) => and(
+      between(shipments.scheduledDate, today, endDate),
+      ne(shipments.status, 'cancelado'),
+      ne(shipments.status, 'entregue')
+    ),
+    with: {
+      order: true,
+      carrier: true
+    },
+    orderBy: (shipments, { asc }) => [asc(shipments.scheduledDate)]
+  });
+};
+
+export const createShipment = async (data: ShipmentInsert) => {
+  // Gerar número de embarque se não for fornecido
+  if (!data.shipmentNumber) {
+    data.shipmentNumber = generateShipmentNumber();
+  }
+  
+  const [newShipment] = await db.insert(shipments).values(data).returning();
+  
+  // Se a ordem já estiver pendente, atualizar para 'processing'
+  const order = await getOrderById(data.orderId);
+  if (order && order.status === 'pending') {
+    await updateOrder(data.orderId, { status: 'processing' });
+  }
+  
+  await createActivity({
+    type: 'shipment',
+    description: `Embarque ${data.shipmentNumber} agendado para ${new Date(data.scheduledDate).toLocaleDateString('pt-BR')}`,
+    referenceId: newShipment.id
+  });
+  
+  return newShipment;
+};
+
+export const updateShipment = async (id: number, data: Partial<ShipmentInsert>) => {
+  const [updatedShipment] = await db.update(shipments)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(shipments.id, id))
+    .returning();
+  
+  // Se o status foi alterado para 'em_transito', atualizar o status do pedido para 'shipped'
+  if (data.status === 'em_transito') {
+    await updateOrder(updatedShipment.orderId, { status: 'shipped' });
+  }
+  
+  // Se o status foi alterado para 'entregue', atualizar o status do pedido para 'delivered'
+  if (data.status === 'entregue') {
+    await updateOrder(updatedShipment.orderId, { status: 'delivered' });
+  }
+  
+  await createActivity({
+    type: 'shipment',
+    description: `Embarque ${updatedShipment.shipmentNumber} atualizado para status ${data.status || updatedShipment.status}`,
+    referenceId: updatedShipment.id
+  });
+  
+  return updatedShipment;
+};
+
+export const cancelShipment = async (id: number, reason: string) => {
+  const [canceledShipment] = await db.update(shipments)
+    .set({ 
+      status: 'cancelado',
+      notes: reason ? `Cancelado: ${reason}` : 'Cancelado sem motivo especificado',
+      updatedAt: new Date() 
+    })
+    .where(eq(shipments.id, id))
+    .returning();
+  
+  await createActivity({
+    type: 'shipment',
+    description: `Embarque ${canceledShipment.shipmentNumber} cancelado: ${reason || 'sem motivo especificado'}`,
+    referenceId: canceledShipment.id
+  });
+  
+  return canceledShipment;
+};
+
+// Gerar um número de embarque único
+function generateShipmentNumber(): string {
+  const prefix = "EXP";
+  const timestamp = Date.now().toString().slice(-6);
+  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  return `${prefix}-${timestamp}-${random}`;
+}
+
 export const storage = {
   // Products
   getAllProducts,
@@ -388,5 +586,23 @@ export const storage = {
   
   // Exchange Rates
   getExchangeRates,
-  convertCurrency
+  convertCurrency,
+  
+  // Carriers
+  getAllCarriers,
+  getActiveCarriers,
+  getCarrierById,
+  getCarrierByCode,
+  createCarrier,
+  updateCarrier,
+  
+  // Shipments
+  getAllShipments,
+  getShipmentById,
+  getShipmentsByOrderId,
+  getShipmentsByStatus,
+  getUpcomingShipments,
+  createShipment,
+  updateShipment,
+  cancelShipment
 };
