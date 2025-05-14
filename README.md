@@ -1,18 +1,57 @@
 # Importação e Exportação (Import/Export) Application
 
 ## Descrição do Projeto
-Este projeto é uma aplicação de gerenciamento de importação e exportação, projetada para facilitar o controle e rastreamento de processos de importação e exportação.
+Sistema completo de Gestão de Importação e Exportação, projetado para empresas que necessitam de controle preciso e eficiente de seus processos logísticos e comerciais internacionais.
 
 ## Funcionalidades Principais
-- Gerenciamento de registros de importação
-- Controle de exportações
-- Rastreamento de documentos e transações
-- Geração de relatórios
+### 1. Painel de Controle
+- Visão geral de atividades de importação e exportação
+- Métricas de desempenho em tempo real
+
+### 2. Gerenciamento de Estoque
+- Controle detalhado de produtos
+- Rastreamento de níveis de estoque
+- Monitoramento de entrada e saída de mercadorias
+
+### 3. Gestão de Pedidos
+- Criação e acompanhamento de pedidos de importação/exportação
+- Controle de status de pedidos
+- Documentação automatizada
+
+### 4. Catálogo de Produtos
+- Registro completo de produtos
+- Classificação e categorização
+- Informações detalhadas de cada item
+
+### 5. Relatórios Avançados
+- Relatórios personalizados de importação/exportação
+- Análises financeiras
+- Relatórios de desempenho de estoque e pedidos
+
+## Tecnologias e Frameworks
+
+### Backend
+- **Linguagem:** TypeScript
+- **Servidor:** Express.js
+- **Runtime:** Node.js
+- **ORM:** Drizzle ORM
+- **Banco de Dados:** PostgreSQL (Neon Serverless)
+
+### Frontend
+- **Framework:** React
+- **Biblioteca de UI:** Radix UI
+- **Gerenciamento de Estado:** React Query
+- **Construção:** Vite
+
+### Ferramentas de Desenvolvimento
+- **Transpilador:** TSX
+- **Gerenciamento de Ambiente:** Dotenv
+- **Construção:** esbuild
 
 ## Requisitos do Sistema
 - Node.js (versão recomendada: 16.x ou superior)
-- TypeScript
-- Banco de dados (conforme configuração no projeto)
+- PostgreSQL
+- Gerenciador de pacotes npm
 
 ## Instalação
 
